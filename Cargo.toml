@@ -1,0 +1,2 @@
+[workspace]
+members = ["crates/web", "crates/migration", "crates/entity"]
