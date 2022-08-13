@@ -10,10 +10,11 @@ use axum::{
     Json, Router,
 };
 use chrono::NaiveDateTime;
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-
 use pkg::responder::{failed, success, Data, StatusCode as RespCode};
+use serde::{Deserialize, Serialize};
+
+
+use std::sync::Arc;
 
 //request
 #[derive(Deserialize)]
@@ -72,8 +73,8 @@ fn auth() -> Router {
             .user_repo
             .get_by_account(payload.account.clone())
             .await
-            .unwrap()
             .unwrap();
+
         let claims = Claims {
             account: user_data.account.clone(),
             role: user_data.role.clone(),
@@ -84,10 +85,8 @@ fn auth() -> Router {
         // Create the authorization token
         let token = token_encode(claims).map_err(|_| AuthError::TokenCreation)?;
 
-        c.user_repo
-            .save_token(user_data, token.clone())
-            .await
-            .map_err(|_| AuthError::WrongCredentials)?;
+        c.user_repo.save_token(user_data, token.clone()).await;
+
         // Send the authorized token
         Ok(Json(AuthBody::new(token)))
     }
@@ -103,12 +102,7 @@ fn info() -> Router {
         claims: Claims,
         Extension(c): Extension<Arc<UserContainer>>,
     ) -> impl IntoResponse {
-        let user_data = c
-            .user_repo
-            .get_by_account(claims.account)
-            .await
-            .unwrap()
-            .unwrap();
+        let user_data = c.user_repo.get_by_account(claims.account).await.unwrap();
 
         let info = UserInfo {
             account: user_data.account,
@@ -139,3 +133,4 @@ impl Data for UserInfo {}
 fn route(path: &str, method_router: MethodRouter) -> Router {
     Router::new().route(path, method_router)
 }
+

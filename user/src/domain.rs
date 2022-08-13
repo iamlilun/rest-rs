@@ -6,10 +6,7 @@ use entity::users;
 
 #[async_trait]
 pub trait UserRepository {
-    async fn get_by_account(&mut self, account: String) -> Result<Option<users::Model>, DbErr>;
-    async fn save_token(
-        &mut self,
-        model: users::Model,
-        token: String,
-    ) -> Result<users::Model, DbErr>;
+    async fn get_by_account(&mut self, account: String) -> Option<users::Model>;
+
+    async fn save_token(&mut self, model: users::Model, token: String) -> users::Model;
 }

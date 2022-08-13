@@ -1,8 +1,34 @@
 use serde::Serialize;
-use std::boxed::Box;
+
 use std::fmt;
+use std::marker::PhantomData;
+
 pub trait Data: Serialize + Sized {}
 
+//handler no data
+#[derive(Serialize)]
+pub struct NoData {
+    #[serde(skip)]
+    data: PhantomData<()>,
+}
+
+impl Data for NoData {}
+
+impl NoData {
+    pub fn new() -> Self {
+        NoData { data: PhantomData }
+    }
+}
+
+impl Default for NoData {
+    fn default() -> Self {
+        NoData::new()
+    }
+}
+
+/**
+ * content struct
+ */
 #[derive(Serialize)]
 pub struct Content<D: Data> {
     pub status: i32,
@@ -10,6 +36,9 @@ pub struct Content<D: Data> {
     pub data: D,
 }
 
+/**
+ * paginate struct
+ */
 #[derive(Serialize)]
 pub struct Paginate<C> {
     #[serde(flatten)]
@@ -19,6 +48,9 @@ pub struct Paginate<C> {
     pub corrent_page: i32,
 }
 
+/**
+ * make success resp data
+ */
 pub fn success(data: impl Data) -> (i32, Content<impl Data>) {
     let status = to_code(&StatusCode::STATUS_OK);
     let cnt = Content {
@@ -30,6 +62,9 @@ pub fn success(data: impl Data) -> (i32, Content<impl Data>) {
     (status, cnt)
 }
 
+/**
+ * make failed resp data
+ */
 pub fn failed(status: StatusCode, data: impl Data) -> (i32, Content<impl Data>) {
     let status = to_code(&status);
     let cnt = Content {
@@ -41,6 +76,9 @@ pub fn failed(status: StatusCode, data: impl Data) -> (i32, Content<impl Data>) 
     (status, cnt)
 }
 
+/**
+ * make pagin resp data
+ */
 pub fn pagination(
     data: impl Data,
     page: i32,
@@ -64,6 +102,9 @@ pub fn pagination(
     (status, pagin)
 }
 
+/**
+ * status code enum
+ */
 #[derive(Copy, Clone)]
 pub enum StatusCode {
     STATUS_OK = 2000,
@@ -76,10 +117,16 @@ pub enum StatusCode {
     STATUS_UNKNOWNERR = 5001,
 }
 
+/**
+ * enum to code number
+ */
 fn to_code(status: &StatusCode) -> i32 {
     *status as i32
 }
 
+/**
+ * support to_string()
+ */
 impl fmt::Display for StatusCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
