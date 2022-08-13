@@ -1,11 +1,11 @@
 use axum::{
     async_trait,
     body::{self, BoxBody, Bytes, Full},
-    extract::{FromRequest, RequestParts},
+    extract::{Extension, FromRequest, RequestParts},
     http::{Request, StatusCode},
     middleware::{self, Next},
     response::{IntoResponse, Response},
-    routing::{get, post},
+    routing::{get, post, MethodRouter},
     Router,
 };
 use dotenv::dotenv;
@@ -23,6 +23,10 @@ use sea_orm::{
     prelude::*, ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr,
     QueryOrder, Set, Statement,
 };
+
+use std::sync::Arc;
+
+use user::UserRepo;
 
 //migrate run migrate
 async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
@@ -47,11 +51,26 @@ async fn main() -> Result<(), DbErr> {
     let db = Database::connect(&db_url).await?;
     migrate(&db).await?;
 
-    let both = Users::find().find_with_related(Orders).all(&db).await?;
-    print!("{:#?}", both);
+    // let both = Users::find().find_with_related(Orders).all(&db).await?;
+    // print!("{:#?}", both);
 
+    // let user_repo = Arc::new(UserRepo {});
+
+    let user_repo = user::UserRepo::new(db.clone());
+    let user_hendler = Arc::new(user::UserHaandler::new(user_repo));
     //--------------------------
-    let app = Router::new().route("/", get(|| async { "Hello, world" }));
+
+    // let helloRoute = route("/v1", get(|| async { "Hello, world" }));
+    // let helloUnderworld = route("/v1/under", get(|| async { "Hello, underworld" }));
+    let user_router = user::auth();
+
+    let main_router = Router::new()
+        // .merge(helloRoute)
+        // .merge(helloUnderworld)
+        .nest("/v1/user", user_router)
+        .layer(Extension(user_hendler));
+
+    let app = Router::new().nest("/api", main_router);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
 

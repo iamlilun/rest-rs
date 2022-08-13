@@ -1,3 +1,9 @@
+// #[derive(Clone)]
+// pub struct AppContainer {
+//     pub db: DatabaseConnection,
+//     pub user_repo: Arc<UserRepo>,
+// }
+
 #[cfg(test)]
 mod tests {
     #[test]
