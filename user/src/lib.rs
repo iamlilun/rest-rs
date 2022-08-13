@@ -1,6 +1,7 @@
 pub mod domain;
 pub mod handler;
 pub mod repository;
+pub mod usecase;
 
 pub use domain::*;
 pub use handler::*;

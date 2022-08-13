@@ -26,6 +26,7 @@ use sea_orm::{
 
 use std::sync::Arc;
 
+use user::usecase::UserUcase;
 use user::{handler::new as new_user_handler, UserContainer, UserRepo};
 
 //migrate run migrate
@@ -57,7 +58,8 @@ async fn main() -> Result<(), DbErr> {
     // let user_repo = Arc::new(UserRepo {});
 
     let user_repo = user::UserRepo::new(db.clone());
-    let user_container = Arc::new(user::UserContainer::new(user_repo));
+    let user_ucase = user::usecase::UserUcase::new(user_repo);
+    let user_container = Arc::new(user::UserContainer::new(user_ucase));
     //--------------------------
 
     // let helloRoute = route("/v1", get(|| async { "Hello, world" }));

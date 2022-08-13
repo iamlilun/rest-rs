@@ -30,7 +30,7 @@ impl Default for NoData {
  * content struct
  */
 #[derive(Serialize)]
-pub struct Content<D: Data> {
+pub struct Content<D> {
     pub status: i32,
     pub msg: String,
     pub data: D,
@@ -51,7 +51,7 @@ pub struct Paginate<C> {
 /**
  * make success resp data
  */
-pub fn success(data: impl Data) -> (i32, Content<impl Data>) {
+pub fn success<D: Data>(data: D) -> (i32, Content<D>) {
     let status = to_code(&StatusCode::STATUS_OK);
     let cnt = Content {
         status,
@@ -65,7 +65,7 @@ pub fn success(data: impl Data) -> (i32, Content<impl Data>) {
 /**
  * make failed resp data
  */
-pub fn failed(status: StatusCode, data: impl Data) -> (i32, Content<impl Data>) {
+pub fn failed<D: Data>(status: StatusCode, data: D) -> (i32, Content<D>) {
     let status = to_code(&status);
     let cnt = Content {
         status: status,

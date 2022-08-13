@@ -1,5 +1,5 @@
 use super::jwt::{token_encode, AuthError, Claims};
-use super::UserRepo;
+
 use axum::{
     async_trait,
     extract::{Extension, FromRequest, RequestParts, TypedHeader},
@@ -11,49 +11,30 @@ use axum::{
 };
 use chrono::{Duration, Local, NaiveDateTime};
 
-use pkg::responder::{failed, success, Data, StatusCode as RespCode};
-use serde::{Deserialize, Serialize};
+use super::domain::{AuthBody, AuthPayload, UserInfo};
+use super::usecase::UserUcase;
+use pkg::responder::{failed, success, StatusCode as RespCode};
 
 use std::sync::Arc;
 
-//request
-#[derive(Deserialize)]
-pub struct AuthPayload {
-    pub account: String,
-    pub password: String,
+/**
+ * new handler
+ */
+pub fn new() -> Router {
+    Router::new().merge(auth()).merge(info())
 }
 
-//response
-#[derive(Serialize)]
-pub struct AuthBody {
-    pub access_token: String,
-    pub token_type: String,
-}
-
-impl AuthBody {
-    //generate data
-    pub fn new(access_token: String) -> Self {
-        Self {
-            access_token,
-            token_type: String::from("Bearer"),
-        }
-    }
-}
-
+/**
+ * 要注入的容器
+ */
 pub struct UserContainer {
-    user_repo: UserRepo,
+    user_ucase: UserUcase,
 }
 
 impl UserContainer {
-    pub fn new(user_repo: UserRepo) -> Self {
-        UserContainer {
-            user_repo: user_repo,
-        }
+    pub fn new(user_ucase: UserUcase) -> Self {
+        UserContainer { user_ucase }
     }
-}
-
-pub fn new() -> Router {
-    Router::new().merge(auth()).merge(info())
 }
 
 /**
@@ -70,7 +51,7 @@ fn auth() -> Router {
         }
 
         let user_data = c
-            .user_repo
+            .user_ucase
             .get_by_account(payload.account.clone())
             .await
             .unwrap();
@@ -89,13 +70,20 @@ fn auth() -> Router {
         // Create the authorization token
         let token = token_encode(claims).map_err(|_| AuthError::TokenCreation)?;
 
-        c.user_repo.save_token(user_data, token.clone()).await;
+        c.user_ucase.save_token(user_data, token.clone()).await;
 
         // Send the authorized token
         Ok(Json(AuthBody::new(token)))
     }
 
     route("/login", post(login_handler))
+}
+
+/**
+ * generate route
+ */
+fn route(path: &str, method_router: MethodRouter) -> Router {
+    Router::new().route(path, method_router)
 }
 
 /**
@@ -106,34 +94,12 @@ fn info() -> Router {
         claims: Claims,
         Extension(c): Extension<Arc<UserContainer>>,
     ) -> impl IntoResponse {
-        let user_data = c.user_repo.get_by_account(claims.account).await.unwrap();
+        let user_info = c.user_ucase.get_info(claims.account).await;
 
-        let info = UserInfo {
-            account: user_data.account,
-            name: user_data.name,
-            role: user_data.role,
-            state: user_data.state,
-            created_at: user_data.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
-        };
+        let (_, resp) = success(user_info);
 
-        let (_, resp) = success(info);
         (StatusCode::OK, Json(resp))
     }
 
     route("/", get(get_info_handler))
-}
-
-#[derive(Serialize)]
-struct UserInfo {
-    account: String,
-    name: String,
-    role: i8,
-    state: i8,
-    created_at: String,
-}
-
-impl Data for UserInfo {}
-
-fn route(path: &str, method_router: MethodRouter) -> Router {
-    Router::new().route(path, method_router)
 }

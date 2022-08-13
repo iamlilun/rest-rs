@@ -1,8 +1,8 @@
 // use super::domain::UserRepository;
 use entity::{orders, prelude::*, users};
 use sea_orm::{
-    prelude::*, ActiveValue::NotSet, ConnectionTrait, Database, DatabaseConnection, DbBackend,
-    DbErr, QueryOrder, Set, Statement,
+    prelude::*, query, ActiveValue::NotSet, ConnectionTrait, Database, DatabaseConnection,
+    DbBackend, DbErr, QueryOrder, QueryResult, Set, Statement,
 };
 use std::sync::Arc;
 
@@ -29,5 +29,21 @@ impl UserRepo {
         let mut user: entity::users::ActiveModel = model.into();
         user.token = Set(token);
         user.update(&self.db).await.unwrap()
+    }
+
+    pub async fn is_exist(&self, account: String) -> bool {
+        let res = self
+            .db
+            .query_one(Statement::from_sql_and_values(
+                DbBackend::MySql,
+                r#"SELECT COUNT(account) AS count FROM users WHERE account = ?"#,
+                vec![account.into()],
+            ))
+            .await
+            .unwrap();
+
+        let count: i64 = res.unwrap().try_get("", "count").unwrap();
+
+        count > 0
     }
 }
