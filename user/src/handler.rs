@@ -9,10 +9,10 @@ use axum::{
     routing::{get, post, MethodRouter},
     Json, Router,
 };
-use chrono::NaiveDateTime;
+use chrono::{Duration, Local, NaiveDateTime};
+
 use pkg::responder::{failed, success, Data, StatusCode as RespCode};
 use serde::{Deserialize, Serialize};
-
 
 use std::sync::Arc;
 
@@ -75,11 +75,15 @@ fn auth() -> Router {
             .await
             .unwrap();
 
+        //計算過期時間..
+        let dt = Local::now() + Duration::weeks(1);
+        let ts = dt.timestamp() as usize;
+
         let claims = Claims {
             account: user_data.account.clone(),
             role: user_data.role.clone(),
             // Mandatory expiry time as UTC timestamp
-            exp: 2000000000, // May 2033
+            exp: ts, //1 weeks
         };
 
         // Create the authorization token
@@ -109,7 +113,7 @@ fn info() -> Router {
             name: user_data.name,
             role: user_data.role,
             state: user_data.state,
-            created_at: user_data.created_at,
+            created_at: user_data.created_at.format("%Y-%m-%d %H:%M:%S").to_string(),
         };
 
         let (_, resp) = success(info);
@@ -125,7 +129,7 @@ struct UserInfo {
     name: String,
     role: i8,
     state: i8,
-    created_at: NaiveDateTime,
+    created_at: String,
 }
 
 impl Data for UserInfo {}
@@ -133,4 +137,3 @@ impl Data for UserInfo {}
 fn route(path: &str, method_router: MethodRouter) -> Router {
     Router::new().route(path, method_router)
 }
-

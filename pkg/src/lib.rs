@@ -1,4 +1,5 @@
 pub mod responder;
+pub mod eztime;
 
 #[cfg(test)]
 mod tests {
