@@ -29,6 +29,7 @@ pub struct Model {
 #[derive(Copy, Clone, Debug, EnumIter)]
 pub enum Relation {
     Users,
+    Subscribes,
 }
 
 impl RelationTrait for Relation {
@@ -38,6 +39,11 @@ impl RelationTrait for Relation {
                 .from(Column::UserAccount)
                 .to(super::users::Column::Account)
                 .into(),
+
+            Self::Subscribes => Entity::belongs_to(super::subscribes::Entity)
+                .from(Column::StrategyName)
+                .to(super::subscribes::Column::StrategyName)
+                .into(),
         }
     }
 }
@@ -45,6 +51,12 @@ impl RelationTrait for Relation {
 impl Related<super::users::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::Users.def()
+    }
+}
+
+impl Related<super::subscribes::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Subscribes.def()
     }
 }
 
