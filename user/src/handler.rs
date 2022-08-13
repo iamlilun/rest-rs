@@ -12,6 +12,9 @@ use axum::{
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+
+use pkg::responder::{failed, success, Data, StatusCode as RespCode};
+
 //request
 #[derive(Deserialize)]
 pub struct AuthPayload {
@@ -48,16 +51,24 @@ impl UserContainer {
     }
 }
 
-pub fn auth() -> Router {
+pub fn new() -> Router {
+    Router::new().merge(auth()).merge(info())
+}
+
+/**
+ * 登錄認證
+ */
+fn auth() -> Router {
     pub async fn login_handler(
         Json(payload): Json<AuthPayload>,
-        Extension(handler): Extension<Arc<UserContainer>>,
+        Extension(c): Extension<Arc<UserContainer>>,
     ) -> Result<Json<AuthBody>, AuthError> {
         // Check if the user sent the credentials
         if payload.account.is_empty() || payload.password.is_empty() {
             return Err(AuthError::MissingCredentials);
         }
-        let user_data = handler
+
+        let user_data = c
             .user_repo
             .get_by_account(payload.account.clone())
             .await
@@ -69,11 +80,11 @@ pub fn auth() -> Router {
             // Mandatory expiry time as UTC timestamp
             exp: 2000000000, // May 2033
         };
+
         // Create the authorization token
         let token = token_encode(claims).map_err(|_| AuthError::TokenCreation)?;
 
-        handler
-            .user_repo
+        c.user_repo
             .save_token(user_data, token.clone())
             .await
             .map_err(|_| AuthError::WrongCredentials)?;
@@ -81,21 +92,13 @@ pub fn auth() -> Router {
         Ok(Json(AuthBody::new(token)))
     }
 
-    pub async fn protected(claims: Claims) -> Result<String, AuthError> {
-        // Send the protected data to the user
-        Ok(format!(
-            "Welcome to the protected area :)\nYour data:\n{}",
-            claims
-        ))
-    }
-
-    route("/login", post(login_handler)).route("/protected", get(protected))
+    route("/login", post(login_handler))
 }
 
 /**
  * get user info
  */
-pub fn info() -> Router {
+fn info() -> Router {
     async fn get_info_handler(
         claims: Claims,
         Extension(c): Extension<Arc<UserContainer>>,
@@ -107,7 +110,7 @@ pub fn info() -> Router {
             .unwrap()
             .unwrap();
 
-        let resp = GetInfoResp {
+        let info = UserInfo {
             account: user_data.account,
             name: user_data.name,
             role: user_data.role,
@@ -115,6 +118,7 @@ pub fn info() -> Router {
             created_at: user_data.created_at,
         };
 
+        let (_, resp) = success(info);
         (StatusCode::OK, Json(resp))
     }
 
@@ -122,13 +126,15 @@ pub fn info() -> Router {
 }
 
 #[derive(Serialize)]
-pub struct GetInfoResp {
-    pub account: String,
-    pub name: String,
-    pub role: i8,
-    pub state: i8,
-    pub created_at: NaiveDateTime,
+struct UserInfo {
+    account: String,
+    name: String,
+    role: i8,
+    state: i8,
+    created_at: NaiveDateTime,
 }
+
+impl Data for UserInfo {}
 
 fn route(path: &str, method_router: MethodRouter) -> Router {
     Router::new().route(path, method_router)

@@ -6,7 +6,9 @@ pub use domain::*;
 pub use handler::*;
 pub use repository::*;
 
-//--------------------------------
+/**
+ * JWT
+ */
 pub mod jwt {
     use axum::{
         async_trait,

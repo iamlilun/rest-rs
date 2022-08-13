@@ -26,7 +26,7 @@ use sea_orm::{
 
 use std::sync::Arc;
 
-use user::{UserContainer, UserRepo};
+use user::{handler::new as new_user_handler, UserContainer, UserRepo};
 
 //migrate run migrate
 async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
@@ -62,9 +62,7 @@ async fn main() -> Result<(), DbErr> {
 
     // let helloRoute = route("/v1", get(|| async { "Hello, world" }));
     // let helloUnderworld = route("/v1/under", get(|| async { "Hello, underworld" }));
-    let info_router = user::info();
-    let auth_router = user::auth();
-    let user_router = Router::new().merge(auth_router).merge(info_router);
+    let user_router = new_user_handler();
 
     let main_router = Router::new()
         .nest("/v1/user", user_router)
