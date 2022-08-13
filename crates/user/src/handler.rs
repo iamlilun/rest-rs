@@ -9,9 +9,9 @@ use axum::{
     routing::{get, post, MethodRouter},
     Json, Router,
 };
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-
 //request
 #[derive(Deserialize)]
 pub struct AuthPayload {
@@ -36,22 +36,22 @@ impl AuthBody {
     }
 }
 
-pub struct UserHaandler {
+pub struct UserContainer {
     user_repo: UserRepo,
 }
 
-impl UserHaandler {
+impl UserContainer {
     pub fn new(user_repo: UserRepo) -> Self {
-        UserHaandler {
+        UserContainer {
             user_repo: user_repo,
         }
     }
 }
 
 pub fn auth() -> Router {
-    pub async fn authorize(
+    pub async fn login_handler(
         Json(payload): Json<AuthPayload>,
-        Extension(handler): Extension<Arc<UserHaandler>>,
+        Extension(handler): Extension<Arc<UserContainer>>,
     ) -> Result<Json<AuthBody>, AuthError> {
         // Check if the user sent the credentials
         if payload.account.is_empty() || payload.password.is_empty() {
@@ -89,14 +89,46 @@ pub fn auth() -> Router {
         ))
     }
 
-    route("/login", post(authorize)).route("/protected", get(protected))
+    route("/login", post(login_handler)).route("/protected", get(protected))
 }
 
-// fn get_info() -> Router {
-//     async fn handler() -> impl IntoResponse {}
+/**
+ * get user info
+ */
+pub fn info() -> Router {
+    async fn get_info_handler(
+        claims: Claims,
+        Extension(c): Extension<Arc<UserContainer>>,
+    ) -> impl IntoResponse {
+        let user_data = c
+            .user_repo
+            .get_by_account(claims.account)
+            .await
+            .unwrap()
+            .unwrap();
 
-//     route("", get(handler))
-// }
+        let resp = GetInfoResp {
+            account: user_data.account,
+            name: user_data.name,
+            role: user_data.role,
+            state: user_data.state,
+            created_at: user_data.created_at,
+        };
+
+        (StatusCode::OK, Json(resp))
+    }
+
+    route("/", get(get_info_handler))
+}
+
+#[derive(Serialize)]
+pub struct GetInfoResp {
+    pub account: String,
+    pub name: String,
+    pub role: i8,
+    pub state: i8,
+    pub created_at: NaiveDateTime,
+}
 
 fn route(path: &str, method_router: MethodRouter) -> Router {
     Router::new().route(path, method_router)
