@@ -7,12 +7,6 @@ use pkg::responder::Data;
 use serde::{Deserialize, Serialize};
 use std::convert::From;
 
-// #[async_trait]
-// pub trait UserRepository {
-//     async fn get_by_account(&mut self, account: String) -> Option<users::Model>;
-
-//     async fn save_token(&mut self, model: users::Model, token: String) -> users::Model;
-// }
 
 /**
  * User info

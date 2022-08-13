@@ -1,10 +1,18 @@
 // use super::domain::UserRepository;
+use async_trait::async_trait;
 use entity::{orders, prelude::*, users};
 use sea_orm::{
     prelude::*, query, ActiveValue::NotSet, ConnectionTrait, Database, DatabaseConnection,
     DbBackend, DbErr, QueryOrder, QueryResult, Set, Statement,
 };
 use std::sync::Arc;
+
+#[async_trait]
+pub trait UserRepository {
+    async fn get_by_account(&mut self, account: String) -> Option<users::Model>;
+
+    async fn save_token(&mut self, model: users::Model, token: String) -> users::Model;
+}
 
 pub struct UserRepo {
     db: DatabaseConnection,
