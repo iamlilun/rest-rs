@@ -1,22 +1,24 @@
-use super::domain::{CreateUser, UserInfo};
+use super::domain::{CreateUser, UserInfo, UserRepository, UserUsecase};
 use super::jwt::{encode_token, Claims};
-use super::repository::UserRepo;
+use async_trait::async_trait;
 use chrono::{Duration, Local};
 use entity::users;
 use sea_orm::ActiveValue::Set;
+use std::sync::Arc;
 
 pub struct UserUcase {
-    user_repo: UserRepo,
+    user_repo: Arc<dyn UserRepository>,
 }
 
 impl UserUcase {
-    pub fn new(user_repo: UserRepo) -> Self {
-        UserUcase { user_repo }
+    pub fn new(user_repo: Arc<dyn UserRepository>) -> Arc<dyn UserUsecase> {
+        Arc::new(UserUcase { user_repo })
     }
 }
 
-impl UserUcase {
-    pub async fn get_by_account(&self, account: String) -> anyhow::Result<Option<users::Model>> {
+#[async_trait]
+impl UserUsecase for UserUcase {
+    async fn get_by_account(&self, account: String) -> anyhow::Result<Option<users::Model>> {
         let res = self.user_repo.get_by_account(account).await?;
         Ok(res)
     }
@@ -24,11 +26,7 @@ impl UserUcase {
     /**
      * 儲存用戶token
      */
-    pub async fn save_token(
-        &self,
-        model: users::Model,
-        token: String,
-    ) -> anyhow::Result<users::Model> {
+    async fn save_token(&self, model: users::Model, token: String) -> anyhow::Result<users::Model> {
         let res = self.user_repo.save_token(model, token).await?;
         Ok(res)
     }
@@ -36,7 +34,7 @@ impl UserUcase {
     /**
      * 取得用戶資料
      */
-    pub async fn get_info(&self, account: String) -> anyhow::Result<UserInfo> {
+    async fn get_info(&self, account: String) -> anyhow::Result<UserInfo> {
         let user_data = self.get_by_account(account).await?.unwrap();
         let info = UserInfo::from(user_data);
         Ok(info)
@@ -45,14 +43,14 @@ impl UserUcase {
     /**
      * 取得用戶資料
      */
-    pub async fn is_exist(&self, account: String) -> bool {
+    async fn is_exist(&self, account: String) -> bool {
         self.user_repo.is_exist(account).await
     }
 
     /**
      * 產生jwt token
      */
-    pub async fn gen_token(&self, account: String, role: i8) -> anyhow::Result<String> {
+    async fn gen_token(&self, account: String, role: i8) -> anyhow::Result<String> {
         //計算過期時間..
         let dt = Local::now() + Duration::weeks(1);
         let ts = dt.timestamp() as usize;
@@ -73,7 +71,7 @@ impl UserUcase {
     /**
      * 建立用戶
      */
-    pub async fn create(&self, body: CreateUser) -> anyhow::Result<users::Model> {
+    async fn create(&self, body: CreateUser) -> anyhow::Result<users::Model> {
         let active_model = users::ActiveModel {
             account: Set(body.account),
             password: Set(body.password),

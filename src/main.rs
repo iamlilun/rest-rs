@@ -1,13 +1,12 @@
+use anyhow::{Error, Result};
 use axum::{extract::Extension, Router};
 use dotenv::dotenv;
 use migration::{Migrator, MigratorTrait};
-use std::env;
+use pkg::db::ORM;
 use std::net::SocketAddr;
-use std::result::Result;
-
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use sea_orm::{Database, DatabaseConnection, DbErr};
+use sea_orm::{DatabaseConnection, DbErr};
 
 use std::sync::Arc;
 
@@ -20,7 +19,7 @@ async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), DbErr> {
+async fn main() -> Result<(), Error> {
     dotenv().ok();
 
     tracing_subscriber::registry()
@@ -32,14 +31,14 @@ async fn main() -> Result<(), DbErr> {
         .init();
 
     //------- db connect ----------
-    let db_url = env::var("DATABASE_URL").unwrap();
-    let db = Database::connect(&db_url).await?;
-    migrate(&db).await?;
+    let mysql = pkg::db::Mysql::new().await?;
+    let db = mysql.get_db().await;
+    migrate(db).await?;
 
     //----- user -----------
-    let user_repo = user::UserRepo::new(db.clone());
+    let user_repo = user::UserRepo::new(Arc::new(mysql));
     let user_ucase = user::usecase::UserUcase::new(user_repo);
-    let user_container = Arc::new(user::UserContainer::new(user_ucase));
+    let user_container = user::UserContainer::new(user_ucase);
 
     //--------------------------
 
@@ -51,9 +50,10 @@ async fn main() -> Result<(), DbErr> {
 
     let app = Router::new().nest("/api", main_router);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
+    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
 
     tracing::debug!("listening on {}", addr);
+    println!("web listening on {}", addr);
 
     axum::Server::bind(&addr)
         .serve(app.into_make_service())

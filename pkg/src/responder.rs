@@ -1,7 +1,7 @@
 use serde::Serialize;
 
 use std::fmt;
-use std::marker::PhantomData;
+// use std::marker::PhantomData;
 
 pub trait Data: Serialize + Sized {}
 
@@ -35,10 +35,10 @@ pub struct Paginate<C> {
  * make success resp data
  */
 pub fn success<D: Data>(data: D) -> (i32, Content<D>) {
-    let status = to_code(&StatusCode::STATUS_OK);
+    let status = to_code(&StatusCode::StatusOK);
     let cnt = Content {
         status,
-        msg: StatusCode::STATUS_OK.to_string(),
+        msg: StatusCode::StatusOK.to_string(),
         data,
     };
 
@@ -68,10 +68,10 @@ pub fn pagination(
     size: i32,
     total: i32,
 ) -> (i32, Paginate<Content<impl Data>>) {
-    let status = to_code(&StatusCode::STATUS_OK);
+    let status = to_code(&StatusCode::StatusOK);
     let cnt = Content {
         status: status,
-        msg: StatusCode::STATUS_OK.to_string(),
+        msg: StatusCode::StatusOK.to_string(),
         data,
     };
 
@@ -90,14 +90,14 @@ pub fn pagination(
  */
 #[derive(Copy, Clone)]
 pub enum StatusCode {
-    STATUS_OK = 2000,
-    STATUS_BADREQ = 4000,
-    STATUS_VALIDATION = 4001,
-    STATUS_DUPLICATE = 4002,
-    STATUS_FORBIDDEN = 4003,
-    STATUS_NOT_FOUND = 4004,
-    STATUS_INTERNAL = 5000,
-    STATUS_UNKNOWNERR = 5001,
+    StatusOK = 2000,
+    StatusBadReq = 4000,
+    StatusValidation = 4001,
+    StatusDuplicate = 4002,
+    StatusForbidden = 4003,
+    StatusNotFound = 4004,
+    StatusInternal = 5000,
+    StatusUnknownErr = 5001,
 }
 
 /**
@@ -113,14 +113,14 @@ fn to_code(status: &StatusCode) -> i32 {
 impl fmt::Display for StatusCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            StatusCode::STATUS_OK => write!(f, "Ok"),
-            StatusCode::STATUS_BADREQ => write!(f, "Bad request"),
-            StatusCode::STATUS_VALIDATION => write!(f, "Validation failed"),
-            StatusCode::STATUS_DUPLICATE => write!(f, "Already exists"),
-            StatusCode::STATUS_FORBIDDEN => write!(f, "Forbidden"),
-            StatusCode::STATUS_NOT_FOUND => write!(f, "Resource not found"),
-            StatusCode::STATUS_INTERNAL => write!(f, "Internal error"),
-            StatusCode::STATUS_UNKNOWNERR => write!(f, "Unknown error"),
+            StatusCode::StatusOK => write!(f, "Ok"),
+            StatusCode::StatusBadReq => write!(f, "Bad request"),
+            StatusCode::StatusValidation => write!(f, "Validation failed"),
+            StatusCode::StatusDuplicate => write!(f, "Already exists"),
+            StatusCode::StatusForbidden => write!(f, "Forbidden"),
+            StatusCode::StatusNotFound => write!(f, "Resource not found"),
+            StatusCode::StatusInternal => write!(f, "Internal error"),
+            StatusCode::StatusUnknownErr => write!(f, "Unknown error"),
         }
     }
 }

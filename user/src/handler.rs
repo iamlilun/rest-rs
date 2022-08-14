@@ -1,3 +1,5 @@
+use super::domain::UserUsecase;
+
 use super::jwt::Claims;
 use axum::{
     extract::Extension,
@@ -12,7 +14,7 @@ use bcrypt::{hash, verify, DEFAULT_COST};
 use validator::Validate;
 
 use super::domain::{AuthBody, AuthPayload, CreateUser, UserInfo};
-use super::usecase::UserUcase;
+
 use pkg::responder::{failed, success, Detail, StatusCode as RespCode};
 
 use std::sync::Arc;
@@ -35,12 +37,12 @@ fn route(path: &str, method_router: MethodRouter) -> Router {
  * 要注入的容器
  */
 pub struct UserContainer {
-    user_ucase: UserUcase,
+    user_ucase: Arc<dyn UserUsecase>,
 }
 
 impl UserContainer {
-    pub fn new(user_ucase: UserUcase) -> Self {
-        UserContainer { user_ucase }
+    pub fn new(user_ucase: Arc<dyn UserUsecase>) -> Arc<UserContainer> {
+        Arc::new(UserContainer { user_ucase })
     }
 }
 
@@ -57,8 +59,7 @@ fn auth() -> Router {
             Ok(_) => (),
             Err(e) => {
                 println!("{:#?}", e);
-                let (_, resp) =
-                    failed(RespCode::STATUS_BADREQ, Detail("validate error".to_owned()));
+                let (_, resp) = failed(RespCode::StatusBadReq, Detail("validate error".to_owned()));
                 let jsonv = serde_json::to_value(resp).unwrap();
                 return (StatusCode::BAD_REQUEST, Json(jsonv));
             }
@@ -76,7 +77,7 @@ fn auth() -> Router {
         let valid = verify(payload.password, user_data.password.as_str()).unwrap();
         if !valid {
             let (_, resp) = failed(
-                RespCode::STATUS_VALIDATION,
+                RespCode::StatusValidation,
                 Detail("Password Verify error".to_owned()),
             );
             let jsonv = serde_json::to_value(resp).unwrap();
@@ -131,7 +132,7 @@ fn create() -> Router {
         //只有admin能新增用戶
         if claims.role < 99 {
             let (_, resp) = failed(
-                RespCode::STATUS_VALIDATION,
+                RespCode::StatusValidation,
                 Detail("Permission error".to_owned()),
             );
             let jsonv = serde_json::to_value(resp).unwrap();
@@ -144,8 +145,7 @@ fn create() -> Router {
             Ok(_) => (),
             Err(e) => {
                 println!("{:#?}", e);
-                let (_, resp) =
-                    failed(RespCode::STATUS_BADREQ, Detail("validate error".to_owned()));
+                let (_, resp) = failed(RespCode::StatusBadReq, Detail("validate error".to_owned()));
                 let jsonv = serde_json::to_value(resp).unwrap();
                 return (StatusCode::BAD_REQUEST, Json(jsonv));
             }
@@ -155,7 +155,7 @@ fn create() -> Router {
         let exist = c.user_ucase.is_exist(payload.account.clone()).await;
         if exist {
             let (_, resp) = failed(
-                RespCode::STATUS_DUPLICATE,
+                RespCode::StatusDuplicate,
                 Detail(String::from("Account not exist")),
             );
             let jsonv = serde_json::to_value(resp).unwrap();

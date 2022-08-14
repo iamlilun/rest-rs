@@ -1,40 +1,37 @@
+use super::domain::UserRepository;
+use async_trait::async_trait;
 use entity::{prelude::*, users};
-use sea_orm::{prelude::*, ConnectionTrait, DatabaseConnection, DbBackend, Set, Statement};
+use pkg::db::ORM;
+use sea_orm::{prelude::*, ConnectionTrait, DbBackend, Set, Statement};
+use std::sync::Arc;
 
 pub struct UserRepo {
-    db: DatabaseConnection,
+    mysql: Arc<dyn ORM>,
 }
 
-impl UserRepo {
-    pub fn new(db: DatabaseConnection) -> Self {
-        UserRepo { db: db }
-    }
-}
-
-impl UserRepo {
-    pub async fn get_by_account(&self, account: String) -> anyhow::Result<Option<users::Model>> {
+#[async_trait]
+impl UserRepository for UserRepo {
+    async fn get_by_account(&self, account: String) -> anyhow::Result<Option<users::Model>> {
+        let db = self.mysql.get_db().await;
         let model = Users::find()
             .filter(users::Column::Account.eq(account))
-            .one(&self.db)
+            .one(db)
             .await?;
 
         Ok(model)
     }
 
-    pub async fn save_token(
-        &self,
-        model: users::Model,
-        token: String,
-    ) -> anyhow::Result<users::Model> {
+    async fn save_token(&self, model: users::Model, token: String) -> anyhow::Result<users::Model> {
+        let db = self.mysql.get_db().await;
         let mut user: entity::users::ActiveModel = model.into();
         user.token = Set(token);
-        let res = user.update(&self.db).await?;
+        let res = user.update(db).await?;
         Ok(res)
     }
 
-    pub async fn is_exist(&self, account: String) -> bool {
-        let res = self
-            .db
+    async fn is_exist(&self, account: String) -> bool {
+        let db = self.mysql.get_db().await;
+        let res = db
             .query_one(Statement::from_sql_and_values(
                 DbBackend::MySql,
                 r#"SELECT COUNT(account) AS count FROM users WHERE account = ?"#,
@@ -48,8 +45,15 @@ impl UserRepo {
         count > 0
     }
 
-    pub async fn create(&self, active: users::ActiveModel) -> anyhow::Result<users::Model> {
-        let model = active.insert(&self.db).await?;
+    async fn create(&self, active: users::ActiveModel) -> anyhow::Result<users::Model> {
+        let db = self.mysql.get_db().await;
+        let model = active.insert(db).await?;
         Ok(model)
+    }
+}
+
+impl UserRepo {
+    pub fn new(mysql: Arc<dyn ORM>) -> Arc<dyn UserRepository> {
+        Arc::new(UserRepo { mysql })
     }
 }

@@ -1,4 +1,4 @@
-use chrono::{DateTime, Duration, Local, NaiveDateTime, ParseError};
+use chrono::{DateTime, Local, ParseError};
 
 const LAYOUT: &'static str = "%Y-%m-%d %H:%M:%S";
 

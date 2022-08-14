@@ -12,7 +12,7 @@ members = [".", "migration", "entity", "user", "pkg"]
 migration = { path = "./migration" }
 entity = { path = "./entity" }
 user = { path = "./user" }
-
+pkg = { path = "./pkg" }
 axum = { varsion = "0.5.15", features = ["headers"] }
 hyper = "0.14"
 tokio = { version = "1.0", features = ["full"] }
@@ -33,3 +33,4 @@ sea-orm = { version = "^0", features = [
 ] }
 jsonwebtoken = "8.0"
 once_cell = "1.8"
+anyhow = "1.0"

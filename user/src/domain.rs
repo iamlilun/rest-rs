@@ -2,11 +2,34 @@
 // use sea_orm::{DatabaseConnection, DbErr};
 // use std::sync::Arc;
 // use axum::async_trait;
-use entity::users::Model as UserModel;
+use anyhow::Result;
+use async_trait::async_trait;
+use entity::users::{ActiveModel as UserActiveModel, Model as UserModel};
 use pkg::responder::Data;
 use serde::{Deserialize, Serialize};
 use std::convert::From;
 use validator::Validate;
+
+/**
+ * Traits
+ */
+#[async_trait]
+pub trait UserRepository: Send + Sync {
+    async fn get_by_account(&self, account: String) -> Result<Option<UserModel>>;
+    async fn save_token(&self, model: UserModel, token: String) -> Result<UserModel>;
+    async fn is_exist(&self, account: String) -> bool;
+    async fn create(&self, active: UserActiveModel) -> Result<UserModel>;
+}
+
+#[async_trait]
+pub trait UserUsecase: Send + Sync {
+    async fn get_by_account(&self, account: String) -> Result<Option<UserModel>>;
+    async fn save_token(&self, model: UserModel, token: String) -> Result<UserModel>;
+    async fn get_info(&self, account: String) -> Result<UserInfo>;
+    async fn is_exist(&self, account: String) -> bool;
+    async fn gen_token(&self, account: String, role: i8) -> Result<String>;
+    async fn create(&self, body: CreateUser) -> Result<UserModel>;
+}
 
 /**
  * Create user request
@@ -17,7 +40,7 @@ pub struct CreateUser {
     pub account: String,
     #[validate(length(min = 6, max = 50))]
     pub password: String,
-    #[validate(length(min = 6, max = 30))]
+    #[validate(length(min = 1, max = 30))]
     pub name: String,
     #[validate(range(min = 1, max = 99))]
     pub role: i8,
