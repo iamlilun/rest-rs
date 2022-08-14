@@ -16,9 +16,9 @@ pub struct Model {
     pub api_key: String,
     pub secret_key: String,
     pub state: i8,
-    pub created_at: DateTime,
-    pub updated_at: DateTime,
-    pub deleted_at: Option<DateTime>,
+    pub created_at: DateTimeLocal,
+    pub updated_at: DateTimeLocal,
+    pub deleted_at: Option<DateTimeLocal>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

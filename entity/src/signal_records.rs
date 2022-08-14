@@ -13,8 +13,8 @@ pub struct Model {
     pub open_price: f64,
     pub close_price: f64,
     pub profit_and_loss: f64,
-    pub created_at: DateTime,
-    pub updated_at: DateTime,
+    pub created_at: DateTimeLocal,
+    pub updated_at: DateTimeLocal,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

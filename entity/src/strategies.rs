@@ -12,8 +12,8 @@ pub struct Model {
     pub side: i8,
     #[sea_orm(column_name = "Remark")]
     pub remark: String,
-    pub created_at: DateTime,
-    pub updated_at: DateTime,
+    pub created_at: DateTimeLocal,
+    pub updated_at: DateTimeLocal,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

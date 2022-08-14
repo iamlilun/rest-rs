@@ -22,8 +22,8 @@ pub struct Model {
     pub strategy_name: String,
     pub action: i8,
     pub state: i8,
-    pub created_at: DateTime,
-    pub updated_at: DateTime,
+    pub created_at: DateTimeLocal,
+    pub updated_at: DateTimeLocal,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

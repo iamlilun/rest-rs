@@ -12,8 +12,8 @@ pub struct Model {
     pub msg: String,
     pub func: String,
     pub user_account: Option<String>,
-    pub created_at: DateTime,
-    pub updated_at: DateTime,
+    pub created_at: DateTimeLocal,
+    pub updated_at: DateTimeLocal,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

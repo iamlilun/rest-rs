@@ -12,8 +12,8 @@ pub struct Model {
     pub amount: f64,
     pub is_isolated: Option<i8>,
     pub leverage: i16,
-    pub created_at: DateTime,
-    pub updated_at: DateTime,
+    pub created_at: DateTimeLocal,
+    pub updated_at: DateTimeLocal,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]
