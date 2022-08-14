@@ -7,6 +7,16 @@ use pkg::responder::Data;
 use serde::{Deserialize, Serialize};
 use std::convert::From;
 
+/**
+ * Create user request
+ */
+#[derive(Deserialize)]
+pub struct CreateUser {
+    pub account: String,
+    pub password: String,
+    pub name: String,
+    pub role: i8,
+}
 
 /**
  * User info
@@ -18,6 +28,18 @@ pub struct UserInfo {
     pub role: i8,
     pub state: i8,
     pub created_at: String,
+}
+
+impl Default for UserInfo {
+    fn default() -> Self {
+        UserInfo {
+            account: "".to_owned(),
+            name: "".to_owned(),
+            role: 0,
+            state: 0,
+            created_at: "".to_owned(),
+        }
+    }
 }
 
 impl Data for UserInfo {}
@@ -58,7 +80,7 @@ pub struct AuthBody {
     pub token_type: String,
 }
 
-// impl Data for AuthBody {}
+impl Data for AuthBody {}
 
 impl AuthBody {
     //generate data

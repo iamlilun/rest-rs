@@ -1,19 +1,19 @@
-use super::jwt::{token_encode, AuthError, Claims};
+use super::jwt::Claims;
+use bcrypt::{hash, verify, DEFAULT_COST};
 
 use axum::{
-    async_trait,
-    extract::{Extension, FromRequest, RequestParts, TypedHeader},
-    headers::{authorization::Bearer, Authorization},
+    extract::Extension,
+    // headers::{authorization::Bearer, Authorization},
     http::StatusCode,
-    response::{IntoResponse, Response},
+    response::IntoResponse,
     routing::{get, post, MethodRouter},
-    Json, Router,
+    Json,
+    Router,
 };
-use chrono::{Duration, Local, NaiveDateTime};
 
-use super::domain::{AuthBody, AuthPayload, UserInfo};
+use super::domain::{AuthBody, AuthPayload, CreateUser, UserInfo};
 use super::usecase::UserUcase;
-use pkg::responder::{failed, success, StatusCode as RespCode};
+use pkg::responder::{failed, success, NoData, StatusCode as RespCode};
 
 use std::sync::Arc;
 
@@ -21,7 +21,14 @@ use std::sync::Arc;
  * new handler
  */
 pub fn new() -> Router {
-    Router::new().merge(auth()).merge(info())
+    Router::new().merge(auth()).merge(info()).merge(create())
+}
+
+/**
+ * generate route
+ */
+fn route(path: &str, method_router: MethodRouter) -> Router {
+    Router::new().route(path, method_router)
 }
 
 /**
@@ -44,46 +51,49 @@ fn auth() -> Router {
     pub async fn login_handler(
         Json(payload): Json<AuthPayload>,
         Extension(c): Extension<Arc<UserContainer>>,
-    ) -> Result<Json<AuthBody>, AuthError> {
+    ) -> (StatusCode, Json<serde_json::Value>) {
         // Check if the user sent the credentials
         if payload.account.is_empty() || payload.password.is_empty() {
-            return Err(AuthError::MissingCredentials);
+            let (_, resp) = failed(RespCode::STATUS_BADREQ, NoData::default());
+            let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonstr)));
         }
 
+        //取得user data
         let user_data = c
             .user_ucase
             .get_by_account(payload.account.clone())
             .await
+            .unwrap()
             .unwrap();
 
-        //計算過期時間..
-        let dt = Local::now() + Duration::weeks(1);
-        let ts = dt.timestamp() as usize;
+        //驗證密碼
+        let valid = verify(payload.password, user_data.password.as_str()).unwrap();
+        if !valid {
+            let (_, resp) = failed(RespCode::STATUS_VALIDATION, NoData::default());
+            let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonstr)));
+        }
 
-        let claims = Claims {
-            account: user_data.account.clone(),
-            role: user_data.role.clone(),
-            // Mandatory expiry time as UTC timestamp
-            exp: ts, //1 weeks
-        };
+        //產生jwt token
+        let token = c
+            .user_ucase
+            .gen_token(user_data.account.clone(), user_data.role)
+            .await
+            .unwrap();
 
-        // Create the authorization token
-        let token = token_encode(claims).map_err(|_| AuthError::TokenCreation)?;
-
-        c.user_ucase.save_token(user_data, token.clone()).await;
+        c.user_ucase
+            .save_token(user_data, token.clone())
+            .await
+            .unwrap();
 
         // Send the authorized token
-        Ok(Json(AuthBody::new(token)))
+        let (_, resp) = success(AuthBody::new(token));
+        let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
+        (StatusCode::OK, Json(serde_json::json!(jsonstr)))
     }
 
     route("/login", post(login_handler))
-}
-
-/**
- * generate route
- */
-fn route(path: &str, method_router: MethodRouter) -> Router {
-    Router::new().route(path, method_router)
 }
 
 /**
@@ -94,7 +104,7 @@ fn info() -> Router {
         claims: Claims,
         Extension(c): Extension<Arc<UserContainer>>,
     ) -> impl IntoResponse {
-        let user_info = c.user_ucase.get_info(claims.account).await;
+        let user_info = c.user_ucase.get_info(claims.account).await.unwrap();
 
         let (_, resp) = success(user_info);
 
@@ -102,4 +112,41 @@ fn info() -> Router {
     }
 
     route("/", get(get_info_handler))
+}
+
+fn create() -> Router {
+    async fn create_user_handler(
+        Json(mut payload): Json<CreateUser>,
+        claims: Claims,
+        Extension(c): Extension<Arc<UserContainer>>,
+    ) -> (StatusCode, Json<serde_json::Value>) {
+        //只有admin能新增用戶
+        if claims.role < 99 {
+            let (_, resp) = failed(RespCode::STATUS_VALIDATION, NoData::default());
+            let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
+
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonstr)));
+        }
+
+        //判斷使用者存在
+        let exist = c.user_ucase.is_exist(payload.account.clone()).await;
+        if exist {
+            let (_, resp) = failed(RespCode::STATUS_DUPLICATE, NoData::default());
+            let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonstr)));
+        }
+
+        //hash 密碼
+        let pwd = hash(payload.password.clone(), DEFAULT_COST).unwrap();
+        payload.password = pwd;
+
+        //存入DB
+        let user_data = c.user_ucase.create(payload).await.unwrap();
+        let (_, resp) = success(UserInfo::from(user_data));
+
+        let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
+        (StatusCode::OK, Json(serde_json::json!(jsonstr)))
+    }
+
+    route("/", post(create_user_handler))
 }

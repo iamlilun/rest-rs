@@ -1,33 +1,17 @@
-use axum::{
-    async_trait,
-    body::{self, BoxBody, Bytes, Full},
-    extract::{Extension, FromRequest, RequestParts},
-    http::{Request, StatusCode},
-    middleware::{self, Next},
-    response::{IntoResponse, Response},
-    routing::{get, post, MethodRouter},
-    Router,
-};
+use axum::{extract::Extension, Router};
 use dotenv::dotenv;
 use migration::{Migrator, MigratorTrait};
 use std::env;
 use std::net::SocketAddr;
 use std::result::Result;
 
-use tower::ServiceBuilder;
-use tower_http::ServiceBuilderExt;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use entity::{orders, prelude::*, users};
-use sea_orm::{
-    prelude::*, ActiveValue, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr,
-    QueryOrder, Set, Statement,
-};
+use sea_orm::{Database, DatabaseConnection, DbErr};
 
 use std::sync::Arc;
 
-use user::usecase::UserUcase;
-use user::{handler::new as new_user_handler, UserContainer, UserRepo};
+use user::handler::new as new_user_handler;
 
 //migrate run migrate
 async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
@@ -52,18 +36,13 @@ async fn main() -> Result<(), DbErr> {
     let db = Database::connect(&db_url).await?;
     migrate(&db).await?;
 
-    // let both = Users::find().find_with_related(Orders).all(&db).await?;
-    // print!("{:#?}", both);
-
-    // let user_repo = Arc::new(UserRepo {});
-
+    //----- user -----------
     let user_repo = user::UserRepo::new(db.clone());
     let user_ucase = user::usecase::UserUcase::new(user_repo);
     let user_container = Arc::new(user::UserContainer::new(user_ucase));
+
     //--------------------------
 
-    // let helloRoute = route("/v1", get(|| async { "Hello, world" }));
-    // let helloUnderworld = route("/v1/under", get(|| async { "Hello, underworld" }));
     let user_router = new_user_handler();
 
     let main_router = Router::new()

@@ -13,15 +13,14 @@ pub use repository::*;
 pub mod jwt {
     use axum::{
         async_trait,
-        extract::{Extension, FromRequest, RequestParts, TypedHeader},
+        extract::{FromRequest, RequestParts, TypedHeader},
         headers::{authorization::Bearer, Authorization},
         http::StatusCode,
         response::{IntoResponse, Response},
-        routing::{get, post, MethodRouter},
-        Json, Router,
+        Json,
     };
 
-    use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+    use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
     use once_cell::sync::Lazy;
     use serde::{Deserialize, Serialize};
     use serde_json::json;
@@ -34,10 +33,17 @@ pub mod jwt {
     });
 
     /**
-     * encode
+     * make token
      */
-    pub fn token_encode(claims: Claims) -> jsonwebtoken::errors::Result<String> {
+    pub fn encode_token(claims: Claims) -> jsonwebtoken::errors::Result<String> {
         encode(&Header::default(), &claims, &KEYS.encoding)
+    }
+
+    /**
+     * decode token
+     */
+    pub fn decode_token(token: &str) -> jsonwebtoken::errors::Result<TokenData<Claims>> {
+        decode::<Claims>(token, &KEYS.decoding, &Validation::default())
     }
 
     /**
@@ -110,10 +116,9 @@ pub mod jwt {
                 TypedHeader::<Authorization<Bearer>>::from_request(req)
                     .await
                     .map_err(|_| AuthError::InvalidToken)?;
+
             // Decode the user data
-            let token_data =
-                decode::<Claims>(bearer.token(), &KEYS.decoding, &Validation::default())
-                    .map_err(|_| AuthError::InvalidToken)?;
+            let token_data = decode_token(bearer.token()).map_err(|_| AuthError::InvalidToken)?;
 
             Ok(token_data.claims)
         }
