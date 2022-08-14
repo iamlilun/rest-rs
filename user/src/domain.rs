@@ -6,15 +6,20 @@ use entity::users::Model as UserModel;
 use pkg::responder::Data;
 use serde::{Deserialize, Serialize};
 use std::convert::From;
+use validator::Validate;
 
 /**
  * Create user request
  */
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate, Debug)]
 pub struct CreateUser {
+    #[validate(length(min = 4, max = 30))]
     pub account: String,
+    #[validate(length(min = 6, max = 50))]
     pub password: String,
+    #[validate(length(min = 6, max = 30))]
     pub name: String,
+    #[validate(range(min = 1, max = 99))]
     pub role: i8,
 }
 
@@ -68,9 +73,11 @@ impl From<UserModel> for UserInfo {
 /**
  * Auth
  */
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Validate, Debug)]
 pub struct AuthPayload {
+    #[validate(length(min = 4, max = 30))]
     pub account: String,
+    #[validate(length(min = 6, max = 50))]
     pub password: String,
 }
 

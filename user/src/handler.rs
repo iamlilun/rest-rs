@@ -1,6 +1,4 @@
 use super::jwt::Claims;
-use bcrypt::{hash, verify, DEFAULT_COST};
-
 use axum::{
     extract::Extension,
     // headers::{authorization::Bearer, Authorization},
@@ -10,10 +8,12 @@ use axum::{
     Json,
     Router,
 };
+use bcrypt::{hash, verify, DEFAULT_COST};
+use validator::Validate;
 
 use super::domain::{AuthBody, AuthPayload, CreateUser, UserInfo};
 use super::usecase::UserUcase;
-use pkg::responder::{failed, success, NoData, StatusCode as RespCode};
+use pkg::responder::{failed, success, Detail, StatusCode as RespCode};
 
 use std::sync::Arc;
 
@@ -52,11 +52,16 @@ fn auth() -> Router {
         Json(payload): Json<AuthPayload>,
         Extension(c): Extension<Arc<UserContainer>>,
     ) -> (StatusCode, Json<serde_json::Value>) {
-        // Check if the user sent the credentials
-        if payload.account.is_empty() || payload.password.is_empty() {
-            let (_, resp) = failed(RespCode::STATUS_BADREQ, NoData::default());
-            let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonstr)));
+        //request validate
+        match payload.validate() {
+            Ok(_) => (),
+            Err(e) => {
+                println!("{:#?}", e);
+                let (_, resp) =
+                    failed(RespCode::STATUS_BADREQ, Detail("validate error".to_owned()));
+                let jsonv = serde_json::to_value(resp).unwrap();
+                return (StatusCode::BAD_REQUEST, Json(jsonv));
+            }
         }
 
         //取得user data
@@ -70,9 +75,12 @@ fn auth() -> Router {
         //驗證密碼
         let valid = verify(payload.password, user_data.password.as_str()).unwrap();
         if !valid {
-            let (_, resp) = failed(RespCode::STATUS_VALIDATION, NoData::default());
-            let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonstr)));
+            let (_, resp) = failed(
+                RespCode::STATUS_VALIDATION,
+                Detail("Password Verify error".to_owned()),
+            );
+            let jsonv = serde_json::to_value(resp).unwrap();
+            return (StatusCode::BAD_REQUEST, Json(jsonv));
         }
 
         //產生jwt token
@@ -89,8 +97,8 @@ fn auth() -> Router {
 
         // Send the authorized token
         let (_, resp) = success(AuthBody::new(token));
-        let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
-        (StatusCode::OK, Json(serde_json::json!(jsonstr)))
+        let jsonv = serde_json::to_value(resp).unwrap();
+        (StatusCode::OK, Json(jsonv))
     }
 
     route("/login", post(login_handler))
@@ -122,18 +130,36 @@ fn create() -> Router {
     ) -> (StatusCode, Json<serde_json::Value>) {
         //只有admin能新增用戶
         if claims.role < 99 {
-            let (_, resp) = failed(RespCode::STATUS_VALIDATION, NoData::default());
-            let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
+            let (_, resp) = failed(
+                RespCode::STATUS_VALIDATION,
+                Detail("Permission error".to_owned()),
+            );
+            let jsonv = serde_json::to_value(resp).unwrap();
 
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonstr)));
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonv)));
+        }
+
+        //request validate
+        match payload.validate() {
+            Ok(_) => (),
+            Err(e) => {
+                println!("{:#?}", e);
+                let (_, resp) =
+                    failed(RespCode::STATUS_BADREQ, Detail("validate error".to_owned()));
+                let jsonv = serde_json::to_value(resp).unwrap();
+                return (StatusCode::BAD_REQUEST, Json(jsonv));
+            }
         }
 
         //判斷使用者存在
         let exist = c.user_ucase.is_exist(payload.account.clone()).await;
         if exist {
-            let (_, resp) = failed(RespCode::STATUS_DUPLICATE, NoData::default());
-            let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
-            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonstr)));
+            let (_, resp) = failed(
+                RespCode::STATUS_DUPLICATE,
+                Detail(String::from("Account not exist")),
+            );
+            let jsonv = serde_json::to_value(resp).unwrap();
+            return (StatusCode::BAD_REQUEST, Json(serde_json::json!(jsonv)));
         }
 
         //hash 密碼
@@ -144,8 +170,8 @@ fn create() -> Router {
         let user_data = c.user_ucase.create(payload).await.unwrap();
         let (_, resp) = success(UserInfo::from(user_data));
 
-        let jsonstr = serde_json::to_string_pretty(&resp).unwrap();
-        (StatusCode::OK, Json(serde_json::json!(jsonstr)))
+        let jsonv = serde_json::to_value(resp).unwrap();
+        (StatusCode::OK, Json(serde_json::json!(jsonv)))
     }
 
     route("/", post(create_user_handler))

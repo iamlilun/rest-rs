@@ -5,26 +5,9 @@ use std::marker::PhantomData;
 
 pub trait Data: Serialize + Sized {}
 
-//handler no data
 #[derive(Serialize)]
-pub struct NoData {
-    #[serde(skip)]
-    data: PhantomData<()>,
-}
-
-impl Data for NoData {}
-
-impl NoData {
-    pub fn new() -> Self {
-        NoData { data: PhantomData }
-    }
-}
-
-impl Default for NoData {
-    fn default() -> Self {
-        NoData::new()
-    }
-}
+pub struct Detail(pub String);
+impl Data for Detail {}
 
 /**
  * content struct
