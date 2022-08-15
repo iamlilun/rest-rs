@@ -41,7 +41,7 @@ impl UserUsecase for UserUcase {
     }
 
     /**
-     * 取得用戶資料
+     * 判斷用戶是否存在
      */
     async fn is_exist(&self, account: String) -> bool {
         self.user_repo.is_exist(account).await
