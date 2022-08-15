@@ -9,6 +9,12 @@ pub struct UserRepo {
     mysql: Arc<dyn ORM>,
 }
 
+impl UserRepo {
+    pub fn new(mysql: Arc<dyn ORM>) -> Arc<dyn UserRepository> {
+        Arc::new(UserRepo { mysql })
+    }
+}
+
 #[async_trait]
 impl UserRepository for UserRepo {
     async fn get_by_account(&self, account: String) -> anyhow::Result<Option<users::Model>> {
@@ -49,11 +55,5 @@ impl UserRepository for UserRepo {
         let db = self.mysql.get_db().await;
         let model = active.insert(db).await?;
         Ok(model)
-    }
-}
-
-impl UserRepo {
-    pub fn new(mysql: Arc<dyn ORM>) -> Arc<dyn UserRepository> {
-        Arc::new(UserRepo { mysql })
     }
 }

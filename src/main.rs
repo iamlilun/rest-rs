@@ -1,5 +1,5 @@
 use anyhow::{Error, Result};
-use axum::{extract::Extension, Router};
+use axum::Router;
 use dotenv::dotenv;
 use migration::{Migrator, MigratorTrait};
 use pkg::db::ORM;
@@ -10,10 +10,7 @@ use sea_orm::{DatabaseConnection, DbErr};
 
 use std::sync::Arc;
 
-use user::delivery::http::handler::new as new_user_handler;
-use user::domain::UserContainer;
-use user::repository::mysql::user_repo::UserRepo;
-use user::usecase::user_ucase::UserUcase;
+use user::router::new as new_user_router;
 
 //migrate run migrate
 async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
@@ -38,18 +35,14 @@ async fn main() -> Result<(), Error> {
     let db = mysql.get_db().await;
     migrate(db).await?;
 
-    //----- user -----------
-    let user_repo = UserRepo::new(Arc::new(mysql));
-    let user_ucase = UserUcase::new(user_repo);
-    let user_container = UserContainer::new(user_ucase);
-    let user_router = new_user_handler();
-    //--------------------------
-    
-    
-    let main_router = Router::new()
-        .nest("/v1/user", user_router)
-        .layer(Extension(user_container));
+    let mysql = Arc::new(mysql);
 
+    //----- user -----------
+    let user_router = new_user_router(mysql); // v1/user
+
+    //--------------------------
+
+    let main_router = Router::new().merge(user_router);
     //--------------------------
 
     let app = Router::new().nest("/api", main_router);

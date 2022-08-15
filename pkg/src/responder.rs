@@ -35,28 +35,27 @@ pub struct Paginate<C> {
  * make success resp data
  */
 pub fn success<D: Data>(data: D) -> (i32, Content<D>) {
-    let status = to_code(&StatusCode::StatusOK);
+    let status = StatusCode::StatusOK;
     let cnt = Content {
-        status,
-        msg: StatusCode::StatusOK.to_string(),
+        status: status.to_int(),
+        msg: status.to_string(),
         data,
     };
 
-    (status, cnt)
+    (status.to_int(), cnt)
 }
 
 /**
  * make failed resp data
  */
 pub fn failed<D: Data>(status: StatusCode, data: D) -> (i32, Content<D>) {
-    let status = to_code(&status);
     let cnt = Content {
-        status: status,
+        status: status.to_int(),
         msg: status.to_string(),
         data,
     };
 
-    (status, cnt)
+    (status.to_int(), cnt)
 }
 
 /**
@@ -68,10 +67,10 @@ pub fn pagination(
     size: i32,
     total: i32,
 ) -> (i32, Paginate<Content<impl Data>>) {
-    let status = to_code(&StatusCode::StatusOK);
+    let status = StatusCode::StatusOK;
     let cnt = Content {
-        status: status,
-        msg: StatusCode::StatusOK.to_string(),
+        status: status.to_int(),
+        msg: status.to_string(),
         data,
     };
 
@@ -82,7 +81,7 @@ pub fn pagination(
         corrent_page: page,
     };
 
-    (status, pagin)
+    (status.to_int(), pagin)
 }
 
 /**
@@ -100,11 +99,10 @@ pub enum StatusCode {
     StatusUnknownErr = 5001,
 }
 
-/**
- * enum to code number
- */
-fn to_code(status: &StatusCode) -> i32 {
-    *status as i32
+impl StatusCode {
+    pub fn to_int(&self) -> i32 {
+        *self as i32
+    }
 }
 
 /**
