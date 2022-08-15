@@ -1,8 +1,8 @@
 use super::domain::{CreateUser, UserInfo, UserRepository, UserUsecase};
-use super::jwt::{encode_token, Claims};
 use async_trait::async_trait;
 use chrono::{Duration, Local};
 use entity::users;
+use pkg::jwt::{encode_token, Claims};
 use sea_orm::ActiveValue::Set;
 use std::sync::Arc;
 

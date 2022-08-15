@@ -1,23 +1,18 @@
-use super::domain::UserUsecase;
-
-use super::jwt::Claims;
+use super::domain::{AuthBody, AuthPayload, CreateUser, UserInfo, UserUsecase};
 use axum::{
     extract::Extension,
-    // headers::{authorization::Bearer, Authorization},
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post, MethodRouter},
-    Json,
-    Router,
+    Json, Router,
 };
 use bcrypt::{hash, verify, DEFAULT_COST};
-use validator::Validate;
-
-use super::domain::{AuthBody, AuthPayload, CreateUser, UserInfo};
-
-use pkg::responder::{failed, success, Detail, StatusCode as RespCode};
-
+use pkg::{
+    jwt::Claims,
+    responder::{failed, success, Detail, StatusCode as RespCode},
+};
 use std::sync::Arc;
+use validator::Validate;
 
 /**
  * new handler
@@ -34,7 +29,7 @@ fn route(path: &str, method_router: MethodRouter) -> Router {
 }
 
 /**
- * 要注入的容器
+ * Extension container
  */
 pub struct UserContainer {
     user_ucase: Arc<dyn UserUsecase>,

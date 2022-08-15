@@ -19,3 +19,5 @@ sea-orm = { version = "^0", features = [
 ] }
 async-trait = "0.1.57"
 anyhow = "1.0"
+axum = { varsion = "0.5.15", features = ["headers"] }
+tokio = { version = "1.0", features = ["full"] }
