@@ -4,7 +4,7 @@ use dotenv::dotenv;
 use migration::{Migrator, MigratorTrait};
 use pkg::db::ORM;
 use std::net::SocketAddr;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 use sea_orm::{DatabaseConnection, DbErr};
 
@@ -23,11 +23,10 @@ async fn main() -> Result<(), Error> {
     dotenv().ok();
 
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::new(
-            std::env::var("RUST_LOG")
-                .unwrap_or_else(|_| "example_consume_body_in_extractor_or_middleware=debug".into()),
+        .with(EnvFilter::new(
+            std::env::var("RUST_LOG").unwrap_or_else(|_| "debug".into()),
         ))
-        .with(tracing_subscriber::fmt::layer())
+        .with(fmt::layer())
         .init();
 
     //------- db connect ----------
@@ -38,7 +37,7 @@ async fn main() -> Result<(), Error> {
     let mysql = Arc::new(mysql);
 
     //----- user -----------
-    let user_router = new_user_router(mysql); // v1/user
+    let user_router = new_user_router(mysql.clone()); // v1/user
 
     //--------------------------
 
