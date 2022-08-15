@@ -55,4 +55,3 @@ vendor
 .rest
 
 /target
-/Cargo.lock
