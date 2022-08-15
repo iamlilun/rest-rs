@@ -1,13 +1,12 @@
 // use super::UserRepo;
 // use sea_orm::{DatabaseConnection, DbErr};
-// use std::sync::Arc;
-// use axum::async_trait;
 use anyhow::Result;
-use async_trait::async_trait;
+use axum::async_trait;
 use entity::users::{ActiveModel as UserActiveModel, Model as UserModel};
 use pkg::responder::Data;
 use serde::{Deserialize, Serialize};
 use std::convert::From;
+use std::sync::Arc;
 use validator::Validate;
 
 /**
@@ -29,6 +28,19 @@ pub trait UserUsecase: Send + Sync {
     async fn is_exist(&self, account: String) -> bool;
     async fn gen_token(&self, account: String, role: i8) -> Result<String>;
     async fn create(&self, body: CreateUser) -> Result<UserModel>;
+}
+
+/**
+ * Extension container
+ */
+pub struct UserContainer {
+    pub user_ucase: Arc<dyn UserUsecase>,
+}
+
+impl UserContainer {
+    pub fn new(user_ucase: Arc<dyn UserUsecase>) -> Arc<UserContainer> {
+        Arc::new(UserContainer { user_ucase })
+    }
 }
 
 /**

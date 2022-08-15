@@ -1,4 +1,4 @@
-use super::domain::{AuthBody, AuthPayload, CreateUser, UserInfo, UserUsecase};
+use crate::domain::{AuthBody, AuthPayload, CreateUser, UserContainer, UserInfo};
 use axum::{
     extract::Extension,
     http::StatusCode,
@@ -26,19 +26,6 @@ pub fn new() -> Router {
  */
 fn route(path: &str, method_router: MethodRouter) -> Router {
     Router::new().route(path, method_router)
-}
-
-/**
- * Extension container
- */
-pub struct UserContainer {
-    user_ucase: Arc<dyn UserUsecase>,
-}
-
-impl UserContainer {
-    pub fn new(user_ucase: Arc<dyn UserUsecase>) -> Arc<UserContainer> {
-        Arc::new(UserContainer { user_ucase })
-    }
 }
 
 /**

@@ -1,4 +1,4 @@
-use super::domain::UserRepository;
+use crate::domain::UserRepository;
 use async_trait::async_trait;
 use entity::{prelude::*, users};
 use pkg::db::ORM;

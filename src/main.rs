@@ -10,7 +10,10 @@ use sea_orm::{DatabaseConnection, DbErr};
 
 use std::sync::Arc;
 
-use user::handler::new as new_user_handler;
+use user::delivery::http::handler::new as new_user_handler;
+use user::domain::UserContainer;
+use user::repository::mysql::user_repo::UserRepo;
+use user::usecase::user_ucase::UserUcase;
 
 //migrate run migrate
 async fn migrate(db: &DatabaseConnection) -> Result<(), DbErr> {
@@ -36,17 +39,18 @@ async fn main() -> Result<(), Error> {
     migrate(db).await?;
 
     //----- user -----------
-    let user_repo = user::UserRepo::new(Arc::new(mysql));
-    let user_ucase = user::usecase::UserUcase::new(user_repo);
-    let user_container = user::UserContainer::new(user_ucase);
-
-    //--------------------------
-
+    let user_repo = UserRepo::new(Arc::new(mysql));
+    let user_ucase = UserUcase::new(user_repo);
+    let user_container = UserContainer::new(user_ucase);
     let user_router = new_user_handler();
-
+    //--------------------------
+    
+    
     let main_router = Router::new()
         .nest("/v1/user", user_router)
         .layer(Extension(user_container));
+
+    //--------------------------
 
     let app = Router::new().nest("/api", main_router);
 

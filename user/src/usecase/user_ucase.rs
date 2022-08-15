@@ -1,4 +1,4 @@
-use super::domain::{CreateUser, UserInfo, UserRepository, UserUsecase};
+use crate::domain::{CreateUser, UserInfo, UserRepository, UserUsecase};
 use async_trait::async_trait;
 use chrono::{Duration, Local};
 use entity::users;
